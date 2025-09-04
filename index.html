@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroRehab AI - Live Session</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+        <h1>NeuroRehab AI 🦾</h1>
+        <p>Live Rehabilitation Session</p>
+    </header>
+
+    <main>
+        <div class="display-container">
+            <div class="video-container">
+                <video id="webcam" autoplay playsinline></video>
+                <canvas id="overlay"></canvas>
+                <div id="loading-message">Please wait, loading AI model...</div>
+            </div>
+            <div class="video-container demo-container" id="demo-container">
+                <video id="demoVideo" loop muted controls></video>
+                <p class="demo-text">Demonstration Video</p>
+            </div>
+        </div>
+
+        <div class="controls-panel">
+            <h2>Exercises</h2>
+            
+            <div class="exercise-selector">
+                <label for="exercise-choice">Choose an Exercise:</label>
+                <select id="exercise-choice">
+                    <option value="seatedMarch">Seated Marching</option>
+                    <option value="shoulderAbduction">Shoulder Abduction</option>
+                    <option value="wallPushup">Wall Push-ups</option>
+                </select>
+            </div>
+
+            <!-- NEW: Goal Setting Section -->
+            <div class="goal-setter">
+                <label for="repGoal">Set Repetition Goal:</label>
+                <input type="number" id="repGoal" value="10" min="1">
+            </div>
+
+            <!-- NEW: Progress Bar -->
+            <div class="progress-container">
+                <div id="progressBar"></div>
+            </div>
+
+            <button id="toggleDemoButton">Show/Hide Demo</button>
+            
+            <div class="status-card rep-counter">
+                <h3>Repetitions</h3>
+                <p id="rep-count">0</p>
+            </div>
+
+            <div class="status-card quality-feedback">
+                <h3>Movement Quality</h3>
+                <p id="quality-text">Begin exercise</p>
+            </div>
+            
+            <div class="status-card stage-tracker">
+                <h3>Current Stage</h3>
+                <p id="stage-text">-</p>
+            </div>
+
+            <div class="buttons">
+                <button id="startButton">Start Session</button>
+                <button id="stopButton" disabled>End Session</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- NEW: Audio element for sound feedback -->
+    <audio id="repSound" src="https://storage.googleapis.com/rehab-demos/rep-complete.mp3"></audio>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+    
+    <script src="app.js"></script>
+
+</body>
+</html>
