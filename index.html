@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroRehab AI - Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Login/Registration Page -->
+    <div id="login-wrapper">
+        <div class="login-box">
+            <i class='bx bxs-bot'></i>
+            <h1>Welcome to NeuroRehab AI</h1>
+            <p>Your personal AI-powered rehabilitation assistant. Please enter your details to begin.</p>
+            <div class="input-group">
+                <label for="userName">Name</label>
+                <input type="text" id="userName" placeholder="e.g., John Doe">
+            </div>
+            <div class="input-group">
+                <label for="userAge">Age</label>
+                <input type="number" id="userAge" placeholder="e.g., 65">
+            </div>
+            <button id="registerButton">Start Rehabilitation</button>
+        </div>
+    </div>
+
+    <!-- Main App Structure (Initially Hidden) -->
+    <div id="app-wrapper" class="hidden">
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <i class='bx bxs-bot'></i>
+                <span>NeuroRehab AI</span>
+            </div>
+            <ul class="sidebar-menu">
+                <li class="active"><a href="#" data-page="live-session"><i class='bx bxs-joystick'></i><span>Live Session</span></a></li>
+                <li><a href="#" data-page="progress"><i class='bx bxs-bar-chart-alt-2'></i><span>Progress</span></a></li>
+                <li><a href="#" data-page="profile"><i class='bx bxs-user-detail'></i><span>Profile</span></a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <a href="#" id="logoutButton"><i class='bx bx-log-out'></i><span>Logout</span></a>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <!-- Page 1: Live Session -->
+            <div id="page-live-session" class="page">
+                <header class="main-header">
+                    <h2>Live Rehabilitation Session</h2>
+                    <p>Focus on your form and complete your goals for today.</p>
+                </header>
+                <div class="session-container">
+                    <div class="video-display-area">
+                        <div class="video-wrapper">
+                            <video id="webcam" autoplay playsinline></video>
+                            <canvas id="overlay"></canvas>
+                            <div id="loading-message">Please wait, loading AI model...</div>
+                        </div>
+                        <div class="video-wrapper demo-wrapper" id="demo-container">
+                            <video id="demoVideo" loop muted controls></video>
+                        </div>
+                    </div>
+                    <div class="controls-panel">
+                        <div class="control-group"><label for="exercise-choice">Choose an Exercise</label><select id="exercise-choice"><option value="seatedMarch">Seated Marching</option><option value="shoulderAbduction">Shoulder Abduction</option><option value="wallPushup">Wall Push-ups</option></select></div>
+                        <div class="control-group"><label for="repGoal">Set Rep Goal</label><input type="number" id="repGoal" value="10" min="1"></div>
+                        <div class="progress-container"><div class="progress-bar-background"><div id="progressBar"></div></div></div>
+                        <div class="stats-grid"><div class="stat-card"><h3>Repetitions</h3><p id="rep-count">0</p></div><div class="stat-card"><h3>Stage</h3><p id="stage-text">-</p></div></div>
+                        <div class="feedback-card"><h3>Movement Quality</h3><p id="quality-text">Begin exercise</p></div>
+                        <button id="toggleDemoButton">Show/Hide Demo</button>
+                        <div class="buttons"><button id="startButton">Start Session</button><button id="stopButton" disabled>End Session</button></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page 2: Progress -->
+            <div id="page-progress" class="page hidden">
+                <header class="main-header"><h2>Your Progress</h2><p>Track your improvements over time.</p></header>
+                <div class="placeholder-content">
+                    <h3>Daily Training Progress Chart Coming Soon!</h3>
+                    <p>This section will feature charts showing your consistency, reps completed per day, and improvements in movement quality.</p>
+                </div>
+            </div>
+
+            <!-- Page 3: Profile -->
+            <div id="page-profile" class="page hidden">
+                <header class="main-header"><h2>Your Profile</h2><p>Your personal details.</p></header>
+                <div class="profile-card">
+                    <i class='bx bxs-user-circle'></i>
+                    <h3 id="profile-name">User Name</h3>
+                    <p>Age: <span id="profile-age">0</span></p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <audio id="repSound" src="https://storage.googleapis.com/rehab-demos/rep-complete.mp3"></audio>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+    <script src="app.js"></script>
+</body>
+</html>
+
