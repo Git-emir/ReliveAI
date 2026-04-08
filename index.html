@@ -3,104 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NeuroRehab AI - Dashboard</title>
+    <title>NeuroRehab AI</title>
+    
     <link rel="stylesheet" href="style.css">
-    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
-</head>
-<body>
 
-    <!-- Login/Registration Page -->
-    <div id="login-wrapper">
-        <div class="login-box">
-            <i class='bx bxs-bot'></i>
-            <h1>Welcome to NeuroRehab AI</h1>
-            <p>Your personal AI-powered rehabilitation assistant. Please enter your details to begin.</p>
-            <div class="input-group">
-                <label for="userName">Name</label>
-                <input type="text" id="userName" placeholder="e.g., John Doe">
-            </div>
-            <div class="input-group">
-                <label for="userAge">Age</label>
-                <input type="number" id="userAge" placeholder="e.g., 65">
-            </div>
-            <button id="registerButton">Start Rehabilitation</button>
-        </div>
-    </div>
+    <style>
+        .hidden { display: none !important; }
+        .page { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        /* Basic clean layout if style.css is missing pieces */
+        #app-wrapper { display: flex; min-height: 100vh; font-family: sans-serif; }
+        .sidebar { width: 250px; background: #2c3e50; color: white; padding: 20px; }
+        .sidebar a { color: white; text-decoration: none; display: block; margin: 10px 0; }
+        .content { flex-grow: 1; padding: 30px; background: #f4f7f6; }
+        .camera-container { position: relative; width: 640px; height: 480px; background: #000; border-radius: 8px; margin-top: 20px; }
+        .stat-box { display: inline-block; padding: 10px 20px; background: #e0e0e0; border-radius: 5px; margin-right: 10px; font-weight: bold; }
+    </style>
 
-    <!-- Main App Structure (Initially Hidden) -->
-    <div id="app-wrapper" class="hidden">
-        <nav class="sidebar">
-            <div class="sidebar-header">
-                <i class='bx bxs-bot'></i>
-                <span>NeuroRehab AI</span>
-            </div>
-            <ul class="sidebar-menu">
-                <li class="active"><a href="#" data-page="live-session"><i class='bx bxs-joystick'></i><span>Live Session</span></a></li>
-                <li><a href="#" data-page="progress"><i class='bx bxs-bar-chart-alt-2'></i><span>Progress</span></a></li>
-                <li><a href="#" data-page="profile"><i class='bx bxs-user-detail'></i><span>Profile</span></a></li>
-            </ul>
-            <div class="sidebar-footer">
-                <a href="#" id="logoutButton"><i class='bx bx-log-out'></i><span>Logout</span></a>
-            </div>
-        </nav>
-
-        <main class="main-content">
-            <!-- Page 1: Live Session -->
-            <div id="page-live-session" class="page">
-                <header class="main-header">
-                    <h2>Live Rehabilitation Session</h2>
-                    <p>Focus on your form and complete your goals for today.</p>
-                </header>
-                <div class="session-container">
-                    <div class="video-display-area">
-                        <div class="video-wrapper">
-                            <video id="webcam" autoplay playsinline></video>
-                            <canvas id="overlay"></canvas>
-                            <div id="loading-message">Please wait, loading AI model...</div>
-                        </div>
-                        <div class="video-wrapper demo-wrapper" id="demo-container">
-                            <video id="demoVideo" loop muted controls></video>
-                        </div>
-                    </div>
-                    <div class="controls-panel">
-                        <div class="control-group"><label for="exercise-choice">Choose an Exercise</label><select id="exercise-choice"><option value="seatedMarch">Seated Marching</option><option value="shoulderAbduction">Shoulder Abduction</option><option value="wallPushup">Wall Push-ups</option></select></div>
-                        <div class="control-group"><label for="repGoal">Set Rep Goal</label><input type="number" id="repGoal" value="10" min="1"></div>
-                        <div class="progress-container"><div class="progress-bar-background"><div id="progressBar"></div></div></div>
-                        <div class="stats-grid"><div class="stat-card"><h3>Repetitions</h3><p id="rep-count">0</p></div><div class="stat-card"><h3>Stage</h3><p id="stage-text">-</p></div></div>
-                        <div class="feedback-card"><h3>Movement Quality</h3><p id="quality-text">Begin exercise</p></div>
-                        <button id="toggleDemoButton">Show/Hide Demo</button>
-                        <div class="buttons"><button id="startButton">Start Session</button><button id="stopButton" disabled>End Session</button></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Page 2: Progress -->
-            <div id="page-progress" class="page hidden">
-                <header class="main-header"><h2>Your Progress</h2><p>Track your improvements over time.</p></header>
-                <div class="placeholder-content">
-                    <h3>Daily Training Progress Chart Coming Soon!</h3>
-                    <p>This section will feature charts showing your consistency, reps completed per day, and improvements in movement quality.</p>
-                </div>
-            </div>
-
-            <!-- Page 3: Profile -->
-            <div id="page-profile" class="page hidden">
-                <header class="main-header"><h2>Your Profile</h2><p>Your personal details.</p></header>
-                <div class="profile-card">
-                    <i class='bx bxs-user-circle'></i>
-                    <h3 id="profile-name">User Name</h3>
-                    <p>Age: <span id="profile-age">0</span></p>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <audio id="repSound" src="https://storage.googleapis.com/rehab-demos/rep-complete.mp3"></audio>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <audio id="repSound" src="https://actions.google.com/sounds/v1/ui/bubble_pop.ogg" preload="auto"></audio>
+
+    <div id="login-wrapper" style="text-align: center; margin-top: 100px; font-family: sans-serif;">
+        <div class="login-box" style="display: inline-block; padding: 40px; background: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-radius: 8px;">
+            <h1>NeuroRehab AI</h1>
+            <p>Welcome! Please enter your details to begin.</p>
+            <br>
+            <input type="text" id="userName" placeholder="Patient Name" style="padding: 10px; margin: 5px;">
+            <input type="number" id="userAge" placeholder="Age" style="padding: 10px; margin: 5px;">
+            <button id="registerButton" style="padding: 10px 20px; background: #4CAF50; color: white; border: none; cursor: pointer;">Start Session</button>
+        </div>
+    </div>
+
+    <div id="app-wrapper" class="hidden">
+        
+        <nav class="sidebar">
+            <div class="profile-section" style="border-bottom: 1px solid #444; padding-bottom: 15px; margin-bottom: 20px;">
+                <h2 style="margin: 0;" id="profile-name">Patient</h2>
+                <p style="margin: 5px 0 0 0; color: #aaa;">Age: <span id="profile-age">--</span></p>
+            </div>
+            <ul class="sidebar-menu" style="list-style: none; padding: 0;">
+                <li><a href="#" data-page="live-session">🎥 Live Exercise</a></li>
+                <li><a href="#" data-page="dashboard">📊 Progress Report</a></li>
+            </ul>
+            <br><br>
+            <button id="logoutButton" style="padding: 10px; background: #e74c3c; color: white; border: none; width: 100%; cursor: pointer;">Log Out</button>
+        </nav>
+
+        <main class="content">
+
+            <div id="page-live-session" class="page">
+                <h2>Rehabilitation Session</h2>
+                
+                <div class="controls" style="margin-bottom: 20px; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                    <select id="exercise-choice" style="padding: 8px;">
+                        <option value="seatedMarch">Seated March (Right Leg)</option>
+                        <option value="shoulderAbduction">Shoulder Abduction (Right Arm)</option>
+                        <option value="wallPushup">Wall Pushup (Right Arm)</option>
+                    </select>
+                    
+                    <label style="margin-left: 15px;">Goal:</label>
+                    <input type="number" id="repGoal" value="10" min="1" max="100" style="width: 50px; padding: 8px;">
+                    
+                    <button id="toggleDemoButton" style="margin-left: 15px; padding: 8px;">Toggle Demo</button>
+                    
+                    <button id="startButton" style="margin-left: 15px; padding: 8px 15px; background: #4CAF50; color: white; border: none; font-weight: bold; cursor: pointer;">Start Camera</button>
+                    <button id="stopButton" disabled style="margin-left: 5px; padding: 8px 15px; background: #f44336; color: white; border: none; font-weight: bold; cursor: pointer;">Stop</button>
+                </div>
+
+                <div class="feedback-panel">
+                    <div class="stat-box" style="background: #e3f2fd; color: #1565c0;">Reps: <span id="rep-count" style="font-size: 1.2em;">0</span></div>
+                    <div class="stat-box" style="background: #fff3e0; color: #e65100;">Stage: <span id="stage-text">-</span></div>
+                    <div class="stat-box feedback" style="background: #e8f5e9; color: #2e7d32; width: 300px;">AI: <span id="quality-text">Begin exercise</span></div>
+                </div>
+
+                <div class="progress-container" style="width: 100%; max-width: 640px; background: #ddd; height: 15px; border-radius: 10px; margin-top: 15px; overflow: hidden;">
+                    <div id="progressBar" style="width: 0%; height: 100%; background: #4CAF50; transition: width 0.3s;"></div>
+                </div>
+
+                <div class="camera-container">
+                    <div id="loading-message" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; z-index: 10;">Waiting for camera...</div>
+                    <video id="webcam" autoplay playsinline style="position: absolute; width: 640px; height: 480px; display: none;"></video>
+                    <canvas id="overlay" style="position: absolute; width: 640px; height: 480px; z-index: 5;"></canvas>
+                </div>
+
+                <div id="demo-container" style="display: none; margin-top: 20px;">
+                    <h3>Exercise Demo</h3>
+                    <video id="demoVideo" loop muted playsinline style="width: 320px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);"></video>
+                </div>
+            </div>
+
+            <div id="page-dashboard" class="page hidden">
+                <h2>My Recovery Progress</h2>
+                <p>Track your completed daily repetition goals.</p>
+                
+                <div class="report-container" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px; max-width: 800px;">
+                    <canvas id="progressChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
     <script src="app.js"></script>
 </body>
 </html>
-
