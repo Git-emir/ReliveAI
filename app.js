@@ -38,87 +38,82 @@ const demoVideos = {
 
 // --- GLOBAL VARIABLES & ACCURACY BUFFERS ---
 let repCounter = 0;
-let stage = '';
+let stage = 'down'; // Default starting stage
 let isSessionActive = false;
 let camera = null;
 let currentExercise = 'seatedMarch';
 let repGoal = 10;
 let user = null;
 
-// Buffers for Smoothing (Accuracy Improvement - The "Sweet Spot")
 let angleHistory = [];
-const SMOOTHING_FRAMES = 10; // Averages last 10 frames to prevent jitter
-const MIN_VISIBILITY = 0.5;  // Lenient enough to work in normal lighting
+const SMOOTHING_FRAMES = 5; 
 
-// --- CORE ACCURACY FUNCTIONS ---
-
+// --- CORE MATH LOGIC (BULLETPROOFED) ---
 function calculateAngle(a, b, c) {
-    const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+    // If MediaPipe loses track, prevent the app from crashing
+    if (!a || !b || !c) return 0; 
+    
+    let radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
     let angle = Math.abs(radians * 180.0 / Math.PI);
     if (angle > 180.0) { angle = 360 - angle; }
-    return angle;
+    return Math.round(angle); // Keep it to clean whole numbers
 }
 
 function getSmoothedAngle(newAngle) {
+    // Failsafe: Prevent NaN (Not a Number) from breaking the array
+    if (isNaN(newAngle) || newAngle === 0) return angleHistory.length > 0 ? angleHistory[angleHistory.length - 1] : 0;
+
     angleHistory.push(newAngle);
     if (angleHistory.length > SMOOTHING_FRAMES) {
         angleHistory.shift(); 
     }
     const sum = angleHistory.reduce((a, b) => a + b, 0);
-    return sum / angleHistory.length;
-}
-
-function areJointsVisible(...joints) {
-    return joints.every(joint => joint.visibility > MIN_VISIBILITY);
+    return Math.round(sum / angleHistory.length);
 }
 
 // --- UI UPDATES ---
 function updateProgressBar() {
     const progress = (repCounter / repGoal) * 100;
     progressBar.style.width = `${progress > 100 ? 100 : progress}%`;
-    if (repCounter >= repGoal) { qualityTextElement.textContent = "Goal Complete! 🎉"; }
 }
 
 function onRepComplete() {
     if (repCounter >= repGoal) return;
     repCounter++;
     repCountElement.textContent = repCounter;
-    repSound.currentTime = 0;
-    repSound.play().catch(e => console.error("Could not play sound:", e));
+    
+    // Play sound safely
+    if (repSound) {
+        repSound.currentTime = 0;
+        repSound.play().catch(e => console.log("Sound muted by browser"));
+    }
+    
     updateProgressBar();
+    if (repCounter >= repGoal) { 
+        qualityTextElement.textContent = "Goal Complete! 🎉"; 
+    }
 }
 
-// --- EXERCISE LOGIC (BALANCED ACCURACY & HYSTERESIS) ---
+// --- EXERCISE LOGIC (HIGHLY FORGIVING) ---
 function handleSeatedMarch(landmarks) {
-    const shoulder = landmarks[12]; // Fixed joint reference
-    const hip = landmarks[24];
-    const knee = landmarks[26];
-
-    if (!areJointsVisible(shoulder, hip, knee)) {
-        qualityTextElement.textContent = "Ensure your side profile is visible.";
-        return;
-    }
+    // USING RIGHT SIDE ONLY
+    const shoulder = landmarks[12]; 
+    const hip = landmarks[24];      
+    const knee = landmarks[26];     
 
     const rawAngle = calculateAngle(shoulder, hip, knee);
     const angle = getSmoothedAngle(rawAngle);
 
-    // Provide form feedback based on angle
-    if (repCounter < repGoal) {
-        if (angle < 90) {
-            qualityTextElement.textContent = "Great lift! Hold it.";
-        } else if (angle < 110) {
-            qualityTextElement.textContent = "Lift a little higher.";
-        } else {
-            qualityTextElement.textContent = "Lift your knee.";
-        }
-    }
+    // LIVE TELEMETRY: This proves the math is working!
+    qualityTextElement.textContent = `Live Hip Angle: ${angle}°`;
 
-    // Strict gaps to prevent accidental reps (Hysteresis)
-    if (angle > 140) { 
+    // Forgiving Logic: 
+    // Sitting normal is roughly 90-110 degrees. Lifting knee brings it to 60-70 degrees.
+    if (angle > 85) { 
         stage = "down";
         stageTextElement.textContent = "Down";
     }
-    if (angle < 90 && stage === 'down') {
+    if (angle < 75 && stage === 'down') {
         stage = "up";
         stageTextElement.textContent = "Up";
         onRepComplete();
@@ -126,34 +121,24 @@ function handleSeatedMarch(landmarks) {
 }
 
 function handleShoulderAbduction(landmarks) {
-    const hip = landmarks[24];
-    const shoulder = landmarks[12];
-    const elbow = landmarks[14];
-
-    if (!areJointsVisible(hip, shoulder, elbow)) {
-        qualityTextElement.textContent = "Ensure your arm is visible.";
-        return;
-    }
+    // USING RIGHT SIDE ONLY
+    const hip = landmarks[24];      
+    const shoulder = landmarks[12]; 
+    const elbow = landmarks[14];    
 
     const rawAngle = calculateAngle(hip, shoulder, elbow);
     const angle = getSmoothedAngle(rawAngle);
 
-    if (repCounter < repGoal) {
-        if (angle > 85) {
-            qualityTextElement.textContent = "Excellent form! Hold it.";
-        } else if (angle > 60) {
-            qualityTextElement.textContent = "Good, a little higher.";
-        } else {
-            qualityTextElement.textContent = "Raise arm to the side.";
-        }
-    }
+    // LIVE TELEMETRY
+    qualityTextElement.textContent = `Live Shoulder Angle: ${angle}°`;
 
-    // Strict gaps
-    if (angle < 40) {
+    // Forgiving Logic:
+    // Arm resting is roughly 15-30 degrees. Raising it brings it above 75 degrees.
+    if (angle < 45) {
         stage = "down";
         stageTextElement.textContent = "Down";
     }
-    if (angle > 85 && stage === 'down') {
+    if (angle > 70 && stage === 'down') {
         stage = "up";
         stageTextElement.textContent = "Up";
         onRepComplete();
@@ -161,34 +146,24 @@ function handleShoulderAbduction(landmarks) {
 }
 
 function handleWallPushup(landmarks) {
-    const shoulder = landmarks[12];
-    const elbow = landmarks[14];
-    const wrist = landmarks[16];
-
-    if (!areJointsVisible(shoulder, elbow, wrist)) {
-        qualityTextElement.textContent = "Ensure your arm is visible.";
-        return;
-    }
+    // USING RIGHT SIDE ONLY
+    const shoulder = landmarks[12]; 
+    const elbow = landmarks[14];    
+    const wrist = landmarks[16];    
 
     const rawAngle = calculateAngle(shoulder, elbow, wrist);
     const angle = getSmoothedAngle(rawAngle);
 
-    if (repCounter < repGoal) {
-        if (angle < 95) {
-            qualityTextElement.textContent = "Excellent push! Now extend.";
-        } else if (angle < 120) {
-            qualityTextElement.textContent = "A little deeper.";
-        } else {
-            qualityTextElement.textContent = "Bend your elbows.";
-        }
-    }
+    // LIVE TELEMETRY
+    qualityTextElement.textContent = `Live Elbow Angle: ${angle}°`;
 
-    // Strict gaps
-    if (angle > 160) {
+    // Forgiving Logic:
+    // Arms extended is roughly 160-180 degrees. Bending them drops it below 120.
+    if (angle > 140) {
         stage = "out";
         stageTextElement.textContent = "Out";
     }
-    if (angle < 100 && stage === 'out') {
+    if (angle < 120 && stage === 'out') {
         stage = "in";
         stageTextElement.textContent = "In";
         onRepComplete();
@@ -198,10 +173,11 @@ function handleWallPushup(landmarks) {
 // --- AI & CAMERA ---
 function onResults(results) {
     if (!results.poseLandmarks || !isSessionActive) return;
+    
     canvasCtx.save();
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
     
-    // Draw lines and dots on the user
+    // Draw the tracking dots
     drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, { color: '#00FF00', lineWidth: 4 });
     drawLandmarks(canvasCtx, results.poseLandmarks, { color: '#FF0000', lineWidth: 2 });
     
@@ -213,20 +189,20 @@ function onResults(results) {
             case 'wallPushup': handleWallPushup(landmarks); break;
         }
     } catch (error) { 
-        console.error("Tracking Error: ", error); 
+        console.error("Logic Error: ", error); 
     }
     canvasCtx.restore();
 }
 
 const pose = new Pose({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}` });
 
-// Sweet Spot AI Settings
+// Most reliable settings for webcams
 pose.setOptions({ 
     modelComplexity: 1, 
     smoothLandmarks: true, 
     enableSegmentation: false,
-    minDetectionConfidence: 0.6, // Perfect balance
-    minTrackingConfidence: 0.6   // Perfect balance
+    minDetectionConfidence: 0.5, 
+    minTrackingConfidence: 0.5   
 });
 pose.onResults(onResults);
 
@@ -235,7 +211,7 @@ async function updateDemoVideo(exercise) {
     if (videoUrl) {
         demoVideoElement.src = videoUrl;
         try { await demoVideoElement.play(); } 
-        catch (err) { console.error("Video autoplay failed:", err); }
+        catch (err) { console.log("Video autoplay blocked"); }
     }
 }
 
@@ -290,11 +266,8 @@ function checkForSavedUser() {
 registerButton.addEventListener('click', () => {
     const name = userNameInput.value.trim();
     const age = userAgeInput.value;
-    if (name && age) {
-        login(name, age);
-    } else {
-        alert("Please enter both name and age.");
-    }
+    if (name && age) { login(name, age); } 
+    else { alert("Please enter both name and age."); }
 });
 
 sidebarLinks.forEach(link => {
@@ -313,45 +286,41 @@ logoutButton.addEventListener('click', (e) => {
 exerciseChoice.addEventListener('change', (e) => {
     currentExercise = e.target.value;
     repCounter = 0;
-    angleHistory = []; // Reset the smoothing buffer
+    angleHistory = []; 
+    stage = 'down'; // Reset stage
     repCountElement.textContent = repCounter;
     updateProgressBar();
-    stage = '';
     stageTextElement.textContent = '-';
     qualityTextElement.textContent = 'Begin exercise';
     updateDemoVideo(currentExercise);
 });
 
-toggleDemoButton.addEventListener('click', () => {
-    demoContainer.style.display = (demoContainer.style.display === 'none' || demoContainer.style.display === '') ? 'block' : 'none';
-});
-
 repGoalInput.addEventListener('change', () => {
     repGoal = parseInt(repGoalInput.value);
-    if (!isSessionActive) {
-        updateProgressBar();
-    }
+    if (!isSessionActive) updateProgressBar();
 });
 
 startButton.addEventListener('click', () => {
-    repSound.play().then(() => {
-        repSound.pause();
-        repSound.currentTime = 0;
-    }).catch(e => console.log("Audio priming failed."));
+    if (repSound) {
+        repSound.play().then(() => {
+            repSound.pause();
+            repSound.currentTime = 0;
+        }).catch(e => console.log("Audio prep failed"));
+    }
 
     isSessionActive = true;
     repGoal = parseInt(repGoalInput.value);
-    angleHistory = []; // Clear buffer on start
+    angleHistory = []; 
+    stage = 'down'; // Force starting stage
+    
     startButton.disabled = true;
     stopButton.disabled = false;
     exerciseChoice.disabled = true;
     repGoalInput.disabled = true;
 
     videoElement.style.display = "block";
-    
-    // REVERTED to original logic so the video won't break
-    canvasElement.width = videoElement.clientWidth;
-    canvasElement.height = videoElement.clientHeight;
+    canvasElement.width = 640;
+    canvasElement.height = 480;
 
     camera = new Camera(videoElement, {
         onFrame: async () => {
@@ -375,10 +344,9 @@ stopButton.addEventListener('click', () => {
 
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
     repCounter = 0;
-    angleHistory = []; // Clear buffer on stop
+    angleHistory = []; 
     repCountElement.textContent = repCounter;
     updateProgressBar();
-    stage = '';
     stageTextElement.textContent = '-';
     qualityTextElement.textContent = 'Session Over';
     videoElement.style.display = "none";
