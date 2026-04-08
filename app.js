@@ -45,14 +45,13 @@ let currentExercise = 'seatedMarch';
 let repGoal = 10;
 let user = null;
 
-// Buffers for Smoothing (Accuracy Improvement)
+// Buffers for Smoothing (Accuracy Improvement - The "Sweet Spot")
 let angleHistory = [];
-const SMOOTHING_FRAMES = 5; // Averages the last 5 frames to prevent jitter
-const MIN_VISIBILITY = 0.65; // Ignores joints if the AI is less than 65% sure they exist
+const SMOOTHING_FRAMES = 10; // Averages last 10 frames to prevent jitter
+const MIN_VISIBILITY = 0.5;  // Lenient enough to work in normal lighting
 
 // --- CORE ACCURACY FUNCTIONS ---
 
-// 1. Calculate the raw angle
 function calculateAngle(a, b, c) {
     const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
     let angle = Math.abs(radians * 180.0 / Math.PI);
@@ -60,7 +59,6 @@ function calculateAngle(a, b, c) {
     return angle;
 }
 
-// 2. Smooth the angle to prevent sudden jumping/glitching
 function getSmoothedAngle(newAngle) {
     angleHistory.push(newAngle);
     if (angleHistory.length > SMOOTHING_FRAMES) {
@@ -70,7 +68,6 @@ function getSmoothedAngle(newAngle) {
     return sum / angleHistory.length;
 }
 
-// 3. Check if the camera can actually see the required body parts
 function areJointsVisible(...joints) {
     return joints.every(joint => joint.visibility > MIN_VISIBILITY);
 }
@@ -91,22 +88,23 @@ function onRepComplete() {
     updateProgressBar();
 }
 
-// --- EXERCISE LOGIC (HIGH ACCURACY) ---
+// --- EXERCISE LOGIC (BALANCED ACCURACY & HYSTERESIS) ---
 function handleSeatedMarch(landmarks) {
-    const shoulder = landmarks[12]; // Fixed: Was 24
-    const hip = landmarks[24];      // Right Hip
-    const knee = landmarks[26];     // Right Knee
+    const shoulder = landmarks[12]; // Fixed joint reference
+    const hip = landmarks[24];
+    const knee = landmarks[26];
 
     if (!areJointsVisible(shoulder, hip, knee)) {
-        qualityTextElement.textContent = "Please ensure your full side profile is visible.";
+        qualityTextElement.textContent = "Ensure your side profile is visible.";
         return;
     }
 
     const rawAngle = calculateAngle(shoulder, hip, knee);
     const angle = getSmoothedAngle(rawAngle);
 
+    // Provide form feedback based on angle
     if (repCounter < repGoal) {
-        if (angle < 95) {
+        if (angle < 90) {
             qualityTextElement.textContent = "Great lift! Hold it.";
         } else if (angle < 110) {
             qualityTextElement.textContent = "Lift a little higher.";
@@ -115,11 +113,12 @@ function handleSeatedMarch(landmarks) {
         }
     }
 
-    if (angle > 130) {
+    // Strict gaps to prevent accidental reps (Hysteresis)
+    if (angle > 140) { 
         stage = "down";
         stageTextElement.textContent = "Down";
     }
-    if (angle < 95 && stage === 'down') {
+    if (angle < 90 && stage === 'down') {
         stage = "up";
         stageTextElement.textContent = "Up";
         onRepComplete();
@@ -132,7 +131,7 @@ function handleShoulderAbduction(landmarks) {
     const elbow = landmarks[14];
 
     if (!areJointsVisible(hip, shoulder, elbow)) {
-        qualityTextElement.textContent = "Please ensure your arm and torso are fully visible.";
+        qualityTextElement.textContent = "Ensure your arm is visible.";
         return;
     }
 
@@ -149,7 +148,8 @@ function handleShoulderAbduction(landmarks) {
         }
     }
 
-    if (angle < 30) {
+    // Strict gaps
+    if (angle < 40) {
         stage = "down";
         stageTextElement.textContent = "Down";
     }
@@ -166,7 +166,7 @@ function handleWallPushup(landmarks) {
     const wrist = landmarks[16];
 
     if (!areJointsVisible(shoulder, elbow, wrist)) {
-        qualityTextElement.textContent = "Please ensure your arm is fully visible to the camera.";
+        qualityTextElement.textContent = "Ensure your arm is visible.";
         return;
     }
 
@@ -183,11 +183,12 @@ function handleWallPushup(landmarks) {
         }
     }
 
+    // Strict gaps
     if (angle > 160) {
         stage = "out";
         stageTextElement.textContent = "Out";
     }
-    if (angle < 95 && stage === 'out') {
+    if (angle < 100 && stage === 'out') {
         stage = "in";
         stageTextElement.textContent = "In";
         onRepComplete();
@@ -200,7 +201,7 @@ function onResults(results) {
     canvasCtx.save();
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
     
-    // Draw only if we want visual feedback
+    // Draw lines and dots on the user
     drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, { color: '#00FF00', lineWidth: 4 });
     drawLandmarks(canvasCtx, results.poseLandmarks, { color: '#FF0000', lineWidth: 2 });
     
@@ -219,13 +220,13 @@ function onResults(results) {
 
 const pose = new Pose({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}` });
 
-// UPGRADED ACCURACY OPTIONS
+// Sweet Spot AI Settings
 pose.setOptions({ 
     modelComplexity: 1, 
     smoothLandmarks: true, 
     enableSegmentation: false,
-    minDetectionConfidence: 0.75, // Increased for higher strictness
-    minTrackingConfidence: 0.75   // Increased for higher strictness
+    minDetectionConfidence: 0.6, // Perfect balance
+    minTrackingConfidence: 0.6   // Perfect balance
 });
 pose.onResults(onResults);
 
@@ -348,12 +349,9 @@ startButton.addEventListener('click', () => {
 
     videoElement.style.display = "block";
     
-    // Set explicit canvas dimensions to match video for exact alignment
-    const setCanvasSize = () => {
-        canvasElement.width = videoElement.videoWidth || 640;
-        canvasElement.height = videoElement.videoHeight || 480;
-    };
-    videoElement.addEventListener('loadedmetadata', setCanvasSize);
+    // REVERTED to original logic so the video won't break
+    canvasElement.width = videoElement.clientWidth;
+    canvasElement.height = videoElement.clientHeight;
 
     camera = new Camera(videoElement, {
         onFrame: async () => {
